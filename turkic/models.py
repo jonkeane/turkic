@@ -28,6 +28,7 @@ class HITGroup(database.Base):
     minapprovedamount   = Column(Integer, default = None)
     minapprovedpercent  = Column(Integer, default = None)
     countrycode         = Column(String(10), default = None)
+    maxassignments      = Column(Integer, default = None)
 
 class Worker(database.Base):
     __tablename__ = "turkic_workers"
@@ -128,6 +129,7 @@ class HIT(database.Base):
             minapprovedamount = self.group.minapprovedamount,
             minapprovedpercent = self.group.minapprovedpercent,
             countrycode = self.group.countrycode,
+            maxassignments = self.group.maxassignments,
             page = self.getpage())
         self.hitid = resp.hitid
         self.published = True

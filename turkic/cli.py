@@ -65,6 +65,7 @@ class LoadCommand(object):
         minapprovedamount = args.min_approved_amount if args.min_approved_amount else self.minapprovedamount(args)
         minapprovedpercent = args.min_approved_percent if args.min_approved_percent else self.minapprovedpercent(args)
         countrycode = args.only_allow_country
+        maxassignments = args.maxassignments
 
         donation = 0
         if args.donation == "option":
@@ -82,7 +83,8 @@ class LoadCommand(object):
                          offline = args.offline,
                          minapprovedamount = args.min_approved_amount,
                          minapprovedpercent = args.min_approved_percent,
-                         countrycode = countrycode)
+                         countrycode = countrycode,
+                         maxassignments = maxassignments)
 
         self(args, group)
 
