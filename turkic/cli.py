@@ -89,7 +89,7 @@ class LoadCommand(object):
         self(args, group)
 
     def __call__(self, args, group):
-        raise NotImplementedError("__call__() must be defined") 
+        raise NotImplementedError("__call__() must be defined")
 
     def title(self, args):
         raise NotImplementedError()
@@ -114,7 +114,7 @@ class LoadCommand(object):
 
     def minapprovedpercent(self, args):
         return 90
-        
+
 importparser = argparse.ArgumentParser(add_help=False)
 importparser.add_argument("--title", default = None)
 importparser.add_argument("--description", default = None)
@@ -289,6 +289,7 @@ class publish(Command):
         parser.add_argument("--limit", type=int, default = 0)
         parser.add_argument("--disable", action="store_true")
         parser.add_argument("--offline", action="store_true", default = False)
+        parser.add_argument("--numhits", type=int, default = 2)
         return parser
 
     def __call__(self, args):
@@ -306,6 +307,7 @@ class publish(Command):
                 query = query.filter(HIT.completed == False)
                 if args.limit > 0:
                     query = query.limit(args.limit)
+                query = query.maxassignments(args.numhits)
 
                 for hit in query:
                     try:
@@ -319,6 +321,7 @@ class publish(Command):
                 query = query.filter(HIT.published == False)
                 if args.limit > 0:
                     query = query.limit(args.limit)
+                query = query.maxassignments(args.numhits)
 
                 for hit in query:
                     if args.offline:
@@ -378,7 +381,7 @@ class compensate(Command):
             rejectkeys.extend(line.strip() for line in open(f))
         for f in args.warn:
             warnkeys.extend(line.strip() for line in open(f))
-            
+
         try:
             query = session.query(HIT)
             query = query.filter(HIT.completed == True)
@@ -467,7 +470,7 @@ class setup(Command):
                 print "Could not create symlink!"
             else:
                 print "Created symblink {0} to {1}".format(public, target)
-                
+
         if args.database:
             self.database(args)
 
@@ -500,7 +503,7 @@ class invalidate(Command):
             query = query.filter(HIT.workerid == args.id)
 
         for hit in query:
-            replacement = hit.invalidate() 
+            replacement = hit.invalidate()
             session.add(hit)
             print "Invalidated {0}".format(hit.hitid)
 
