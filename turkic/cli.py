@@ -55,6 +55,7 @@ class Command(object):
 class LoadCommand(object):
     def __init__(self, args):
         args = self.setup().parse_args(args)
+        print(args)
 
         title = args.title if args.title else self.title(args)
         description = args.description if args.description else self.description(args)
@@ -65,7 +66,7 @@ class LoadCommand(object):
         minapprovedamount = args.min_approved_amount if args.min_approved_amount else self.minapprovedamount(args)
         minapprovedpercent = args.min_approved_percent if args.min_approved_percent else self.minapprovedpercent(args)
         countrycode = args.only_allow_country
-        maxassignments = args.maxassignments
+        maxassignments = self.maxassignments(args)
 
         donation = 0
         if args.donation == "option":
@@ -114,6 +115,9 @@ class LoadCommand(object):
 
     def minapprovedpercent(self, args):
         return 90
+
+    def maxassignments(self, args):
+        return 2
 
 importparser = argparse.ArgumentParser(add_help=False)
 importparser.add_argument("--title", default = None)
@@ -289,7 +293,6 @@ class publish(Command):
         parser.add_argument("--limit", type=int, default = 0)
         parser.add_argument("--disable", action="store_true")
         parser.add_argument("--offline", action="store_true", default = False)
-        parser.add_argument("--numhits", type=int, default = 2)
         return parser
 
     def __call__(self, args):
@@ -307,7 +310,6 @@ class publish(Command):
                 query = query.filter(HIT.completed == False)
                 if args.limit > 0:
                     query = query.limit(args.limit)
-                query = query.maxassignments(args.numhits)
 
                 for hit in query:
                     try:
@@ -321,7 +323,6 @@ class publish(Command):
                 query = query.filter(HIT.published == False)
                 if args.limit > 0:
                     query = query.limit(args.limit)
-                query = query.maxassignments(args.numhits)
 
                 for hit in query:
                     if args.offline:
