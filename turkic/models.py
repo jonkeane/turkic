@@ -89,26 +89,8 @@ class HIT(database.Base):
     hitid         = Column(String(30))
     groupid       = Column(Integer, ForeignKey(HITGroup.id), index = True)
     group         = relationship(HITGroup, backref = "hits")
-    assignmentid  = Column(String(30))
-    workerid      = Column(String(14), ForeignKey(Worker.id), index = True)
-    worker        = relationship(Worker, backref = "tasks")
     ready         = Column(Boolean, default = True, index = True)
     published     = Column(Boolean, default = False, index = True)
-    completed     = Column(Boolean, default = False, index = True)
-    compensated   = Column(Boolean, default = False, index = True)
-    accepted      = Column(Boolean, default = False, index = True)
-    validated     = Column(Boolean, default = False, index = True)
-    reason        = Column(Text)
-    comments      = Column(Text)
-    timeaccepted  = Column(DateTime)
-    timecompleted = Column(DateTime)
-    timeonserver  = Column(DateTime)
-    ipaddress     = Column(String(15))
-    page          = Column(String(250), nullable = False, default = "")
-    opt2donate    = Column(Float, default = 0)
-    donatedamount = Column(Float, nullable = False, default = 0.0)
-    bonusamount   = Column(Float, nullable = False, default = 0.0)
-    useful        = Column(Boolean, default = True)
 
     discriminator = Column("type", String(250))
     __mapper_args__ = {"polymorphic_on": discriminator,
@@ -135,25 +117,6 @@ class HIT(database.Base):
         self.published = True
         logger.debug("Published HIT {0}".format(self.hitid))
 
-    def getpage(self):
-        raise NotImplementedError()
-
-    def markcompleted(self, workerid, assignmentid):
-        try:
-            workerid.numsubmitted
-        except:
-            session = database.Session.object_session(self)
-            worker = Worker.lookup(workerid, session)
-        else:
-            worker = workerid
-            
-        self.completed = True
-        self.assignmentid = assignmentid
-        self.worker = worker
-        self.worker.numsubmitted += 1
-
-        logger.debug("HIT {0} marked complete".format(self.hitid))
-
     def disable(self):
         if not self.published:
             raise RuntimeError("HIT cannot be disabled because "
@@ -168,10 +131,67 @@ class HIT(database.Base):
         logger.debug("HIT (was {0}) disabled".format(oldhitid))
         return oldhitid
 
+    def invalidate(self):
+        raise NotImplementedError("Subclass must implement 'invalid()'")
+
+    def getpage(self):
+        # copied from vatic.models, might be wrong.
+        return "?id={0}".format(self.id)
+
+class Assignment(database.Base):
+    __tablename__ = "turkic_assignments"
+
+    id            = Column(Integer, primary_key = True)
+    hitid         = Column(Integer, ForeignKey(HIT.id), index = True)
+    hit           = relationship(HIT, backref = "hit")
+    groupid       = Column(Integer, ForeignKey(HITGroup.id), index = True)
+    group         = relationship(HITGroup, backref = "assignments")
+    assignmentid  = Column(String(30))
+    workerid      = Column(String(14), ForeignKey(Worker.id), index = True)
+    worker        = relationship(Worker, backref = "tasks")
+    completed     = Column(Boolean, default = False, index = True)
+    compensated   = Column(Boolean, default = False, index = True)
+    accepted      = Column(Boolean, default = False, index = True)
+    validated     = Column(Boolean, default = False, index = True)
+    reason        = Column(Text)
+    comments      = Column(Text)
+    timeaccepted  = Column(DateTime)
+    timecompleted = Column(DateTime)
+    timeonserver  = Column(DateTime)
+    ipaddress     = Column(String(15))
+    page          = Column(String(250), nullable = False, default = "")
+    opt2donate    = Column(Float, default = 0)
+    donatedamount = Column(Float, nullable = False, default = 0.0)
+    bonusamount   = Column(Float, nullable = False, default = 0.0)
+    useful        = Column(Boolean, default = True)
+
+    discriminator = Column("type", String(250))
+    __mapper_args__ = {"polymorphic_on": discriminator,
+                       "with_polymorphic": "*"}
+
+    def getpage(self):
+        raise NotImplementedError()
+
+    def markcompleted(self, workerid, assignmentid):
+        try:
+            workerid.numsubmitted
+        except:
+            session = database.Session.object_session(self)
+            worker = Worker.lookup(workerid, session)
+        else:
+            worker = workerid
+
+        self.completed = True
+        self.assignmentid = assignmentid
+        self.worker = worker
+        self.worker.numsubmitted += 1
+
+        logger.debug("HIT {0} marked complete".format(self.hitid))
+
     def accept(self, reason = None, bs = True):
         if not reason:
             if bs:
-                reason = random.choice(reasons) 
+                reason = random.choice(reasons)
             else:
                 reason = ""
 
@@ -214,7 +234,7 @@ class HIT(database.Base):
 
     def check(self):
         return True
-    
+
     def awardbonus(self, amount, reason = None, bs = True):
         self.donatedamount += amount * self.opt2donate
         self.worker.donatedamount += amount * self.opt2donate
@@ -224,8 +244,8 @@ class HIT(database.Base):
         if amount > 0:
             logger.debug("Awarding bonus of {0} on HIT {1}"
                             .format(amount, self.hitid))
-            self.bonusamount += amount 
-            self.worker.bonusamount += amount 
+            self.bonusamount += amount
+            self.worker.bonusamount += amount
             if not reason:
                 if bs:
                     reason = random.choice(reasons)
@@ -239,12 +259,13 @@ class HIT(database.Base):
     def invalidate(self):
         raise NotImplementedError("Subclass must implement 'invalid()'")
 
+
 class EventLog(database.Base):
     __tablename__ = "turkic_event_log"
 
     id        = Column(Integer, primary_key = True)
-    hitid     = Column(Integer, ForeignKey(HIT.id), index = True)
-    hit       = relationship(HIT, cascade = "all", backref = "hits")
+    assignmentid     = Column(Integer, ForeignKey(Assignment.id), index = True)
+    assignment       = relationship(Assignment, cascade = "all", backref = "Assignments")
     domain    = Column(Text)
     message   = Column(Text)
     timestamp = Column(DateTime)

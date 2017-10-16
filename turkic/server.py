@@ -1,5 +1,5 @@
 """
-A lightweight server framework. 
+A lightweight server framework.
 
 To use this module, import the 'application' function, which will dispatch
 requests based on handlers. To define a handler, decorate a function with
@@ -14,6 +14,7 @@ the 'handler' decorator. Example:
 import json
 from turkic.database import session
 from turkic.models import EventLog
+from sqlalchemy import and_
 
 handlers = {}
 
@@ -84,7 +85,7 @@ def application(environ, start_response):
     else:
         start_response("200 OK", [("Content-Type", type)])
         if jsonify:
-            logger.debug("Response to " + str("/".join(path)) + ": " + 
+            logger.debug("Response to " + str("/".join(path)) + ": " +
                 str(response))
             return [json.dumps(response)]
         else:
@@ -103,6 +104,17 @@ class Error404(Exception):
 import models
 from datetime import datetime
 
+def get_open_assignments(hitid, assignmentid = None):
+    """
+    Helper function to get assignments
+    """
+    query = session.query(models.Assignment)
+    query = query.join(models.HIT)
+    query = query.filter(models.HIT.hitid == hitid)
+    # add error handling in the case where there is less than one selected?
+
+    return query.filter(models.Assignment.assignmentid == assignmentid).first()
+
 def getjobstats(hitid, workerid):
     """
     Returns the worker status as a dictionary for the server.
@@ -119,7 +131,7 @@ def getjobstats(hitid, workerid):
     bonuses = [x.description() for x in hit.group.schedules]
     bonuses = [x for x in bonuses if x]
     status["bonuses"] = bonuses
-    
+
     worker = session.query(models.Worker)
     worker = worker.filter(models.Worker.id == workerid)
 
@@ -141,27 +153,29 @@ def getjobstats(hitid, workerid):
         status["blocked"] = worker.blocked
     return status
 
-def savejobstats(hitid, timeaccepted, timecompleted, environ):
+def savejobstats(hitid, assignmentid, timeaccepted, timecompleted, environ):
     """
     Saves statistics for a job.
     """
-    hit = session.query(models.HIT).filter(models.HIT.hitid == hitid).one()
+    # grab a hit from all HITs where the hitid matches the current hitid and
+    # there is not already an assignmentid.
+    assignment = get_open_assignments(hitid, assignmentid)
 
-    hit.timeaccepted = datetime.fromtimestamp(int(timeaccepted) / 1000)
-    hit.timecompleted = datetime.fromtimestamp(int(timecompleted) / 1000)
-    hit.timeonserver = datetime.now()
+    assignment.timeaccepted = datetime.fromtimestamp(int(timeaccepted) / 1000)
+    assignment.timecompleted = datetime.fromtimestamp(int(timecompleted) / 1000)
+    assignment.timeonserver = datetime.now()
 
-    hit.ipaddress = environ.get("HTTP_X_FORWARDED_FOR", None)
-    hit.ipaddress = environ.get("REMOTE_ADDR", hit.ipaddress)
+    assignment.ipaddress = environ.get("HTTP_X_FORWARDED_FOR", None)
+    assignment.ipaddress = environ.get("REMOTE_ADDR", assignment.ipaddress)
 
-    session.add(hit)
+    session.add(assignment)
     session.commit()
 
 def savedonationstatus(hitid, donation):
     """
     Saves the donation statistics
     """
-    hit = session.query(models.HIT).filter(models.HIT.hitid == hitid).one()
+    hit = get_open_assignments(hitid)
     hit.opt2donate = float(donation)
     hit.opt2donate = min(max(hit.opt2donate, 0), 1)
 
@@ -173,20 +187,20 @@ def markcomplete(hitid, assignmentid, workerid):
     Marks a job as complete. Usually this is called right before the
     MTurk form is submitted.
     """
-    hit = session.query(models.HIT).filter(models.HIT.hitid == hitid).one()
-    hit.markcompleted(workerid, assignmentid)
-    session.add(hit)
+    assignment = get_open_assignments(hitid)
+    assignment.markcompleted(workerid, assignmentid)
+    session.add(assignment)
     session.commit()
 
 def saveeventlog(hitid, events):
     """
     Records the event log to database.
     """
-    hit = session.query(models.HIT).filter(models.HIT.hitid == hitid).one()
+    assignment = get_open_assignments(hitid)
 
     for timestamp, domain, message in events:
         timestamp = datetime.fromtimestamp(int(timestamp) / 1000)
-        event = EventLog(hit = hit, domain = domain, message = message,
+        event = EventLog(assignment = assignment, domain = domain, message = message,
                          timestamp = timestamp)
         session.add(event)
     session.commit()

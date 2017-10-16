@@ -114,12 +114,12 @@ function mturk_submit(callback)
 
     $("#turkic_mturk input").val(params.assignmentid);
     $("#turkic_mturk").attr("action", params.action);
-        
+
     // function that must be called to formally complete transaction
     function redirect()
     {
-        server_request("turkic_savejobstats", 
-            [params.hitid, turkic_timeaccepted, now], 
+        server_request("turkic_savejobstats",
+            [params.hitid, params.assignmentid, turkic_timeaccepted, now], 
             function() {
                 mturk_showdonate(function() {
                     eventlog_save(function() {
@@ -179,7 +179,7 @@ function mturk_setuptimer()
     var secondspassed = 0;
 
     button.toggle(function() {
-        $(this).val("Stop Timer"); 
+        $(this).val("Stop Timer");
 
         interval = window.setInterval(function() {
             secondspassed++;
@@ -197,7 +197,7 @@ function mturk_setuptimer()
             tvalue.html(str);
         }, 1000);
     }, function() {
-        $(this).val("Start Timer"); 
+        $(this).val("Start Timer");
 
         window.clearInterval(interval);
         interval = null;
@@ -299,7 +299,7 @@ function mturk_blockbadworkers(callback)
 function mturk_showdonate(callback)
 {
     var str = '<a title="Help end child hunger" href="https://www.wfp.org/' +
-              'donate/fillthecup?utm_medium=banner&utm_campaign=bb-fillthe' + 
+              'donate/fillthecup?utm_medium=banner&utm_campaign=bb-fillthe' +
               'cup125x125" target="_blank"><img width="125" height="125" a' +
               'lt="Help end child hunger" src="http://www.wfp.org/sites/de' +
               'fault/files/125x125_fill_the_cup.jpg" align="right" /></a>';

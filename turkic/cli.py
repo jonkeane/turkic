@@ -55,7 +55,6 @@ class Command(object):
 class LoadCommand(object):
     def __init__(self, args):
         args = self.setup().parse_args(args)
-        print(args)
 
         title = args.title if args.title else self.title(args)
         description = args.description if args.description else self.description(args)
@@ -299,6 +298,7 @@ class publish(Command):
         session = database.connect()
         try:
             query = session.query(HIT)
+            # query = query.join(HIT)
             query = query.join(HITGroup)
             query = query.filter(HITGroup.offline == args.offline)
             query = query.filter(HIT.ready == True)
@@ -307,7 +307,7 @@ class publish(Command):
                     print "Cannot disable offline HITs."
                     return
                 query = query.filter(HIT.published == True)
-                query = query.filter(HIT.completed == False)
+                query = query.filter(Assignment.completed == False)
                 if args.limit > 0:
                     query = query.limit(args.limit)
 
