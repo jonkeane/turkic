@@ -104,7 +104,7 @@ class Error404(Exception):
 import models
 from datetime import datetime
 
-def get_open_assignments(hitid, assignmentid = None):
+def get_open_assignments(hitid, assignmentid = None, workerid = None):
     """
     Helper function to get assignments
     """
@@ -113,6 +113,9 @@ def get_open_assignments(hitid, assignmentid = None):
     query = query.filter(models.HIT.hitid == hitid)
     # add error handling in the case where there is less than one selected?
 
+    if workerid is not None:
+        query.filter(models.Assignment.workerid == workerid).first()
+
     return query.filter(models.Assignment.assignmentid == assignmentid).first()
 
 def getjobstats(hitid, workerid):
@@ -120,11 +123,8 @@ def getjobstats(hitid, workerid):
     Returns the worker status as a dictionary for the server.
     """
     status = {}
-
-    hit = session.query(models.HIT)
-    hit = hit.filter(models.HIT.hitid == hitid)
-    hit = hit.one()
-
+    
+    hit = get_open_assignments(hitid)
     status["reward"] = hit.group.cost
     status["donationcode"] = hit.group.donation
 
