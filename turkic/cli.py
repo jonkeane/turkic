@@ -209,13 +209,15 @@ class status(Command):
         print ""
 
     def serverstatus(self, session):
-        available = session.query(HIT).filter(HIT.ready == True).count()
-        published = session.query(HIT).filter(HIT.published == True).count()
-        completed = session.query(HIT).filter(HIT.completed == True).count()
-        compensated = session.query(HIT).filter(HIT.compensated == True).count()
+        query = session.query(HIT)
+        query = query.join(Assignment)
+        available = query.filter(HIT.ready == True).count()
+        published = query.filter(HIT.published == True).count()
+        completed = query.filter(Assignment.completed == True).count()
+        compensated = query.filter(Assignment.compensated == True).count()
         remaining = published - completed
 
-        print "Status:"
+        print "Status: (assignments)"
         print "  Available:   {0}".format(available)
         print "  Published:   {0}".format(published)
         print "  Completed:   {0}".format(completed)
@@ -350,24 +352,24 @@ class compensate(Command):
         parser.add_argument("--limit", type=int, default = None)
         return parser
 
-    def process(self, hit, acceptkeys, rejectkeys, warnkeys, validated, default):
-        if hit.validated and validated:
-            if hit.accepted:
-                hit.accept()
+    def process(self, assignment, acceptkeys, rejectkeys, warnkeys, validated, default):
+        if assignment.validated and validated:
+            if assignment.accepted:
+                assignment.accept()
             else:
-                hit.reject()
-        elif hit.assignmentid in acceptkeys:
-            hit.accept()
-        elif hit.assignmentid in warnkeys:
-            hit.warn()
-        elif hit.assignmentid in rejectkeys:
-            hit.reject()
+                assignment.reject()
+        elif assignment.assignmentid in acceptkeys:
+            assignment.accept()
+        elif assignment.assignmentid in warnkeys:
+            assignment.warn()
+        elif assignment.assignmentid in rejectkeys:
+            assignment.reject()
         elif default == "accept":
-            hit.accept()
+            assignment.accept()
         elif default == "reject":
-            hit.reject()
+            assignment.reject()
         elif default == "warn":
-            hit.warn()
+            assignment.warn()
 
     def __call__(self, args):
         session = database.connect()
@@ -384,41 +386,42 @@ class compensate(Command):
             warnkeys.extend(line.strip() for line in open(f))
 
         try:
-            query = session.query(HIT)
-            query = query.filter(HIT.completed == True)
-            query = query.filter(HIT.compensated == False)
+            query = session.query(Assignment)
+            query = query.filter(Assignment.completed == True)
+            query = query.filter(Assignment.compensated == False)
             query = query.join(HITGroup)
             query = query.filter(HITGroup.offline == False)
 
             if args.limit:
                 query = query.limit(args.limit)
 
-            for hit in query:
-                if not hit.check():
-                    print "WARNING: {0} failed payment check, ignoring".format(hit.hitid)
+            for assignment in query:
+                if not assignment.check():
+                    print "WARNING: {0} failed payment check, ignoring".format(assignment.assignmentid)
                     continue
                 try:
-                    self.process(hit, acceptkeys, rejectkeys, warnkeys,
+                    self.process(assignment, acceptkeys, rejectkeys, warnkeys,
                         args.validated, args.default)
-                    if hit.compensated:
-                        if hit.accepted:
-                            print "Accepted HIT {0}".format(hit.hitid)
+                    if assignment.compensated:
+                        if assignment.accepted:
+                            print "Accepted Assignment: {0}".format(assignment.assignmentid)
                         else:
-                            print "Rejected HIT {0}".format(hit.hitid)
-                        session.add(hit)
+                            print "Rejected Assignment: {0}".format(assignment.assignmentid)
+                        session.add(assignment)
                 except CommunicationError as e:
-                    hit.compensated = True
-                    session.add(hit)
-                    print "Error with HIT {0}: {1}".format(hit.hitid, e)
+                    assignment.compensated = True
+                    session.add(assignment)
+                    print "Error with Assignment: {0}: {1}".format(assignment.assignmentid, e)
         finally:
             session.commit()
             session.close()
 
 class donation(Command):
     def __call__(self, args):
-        hits = session.query(HIT).filter(HIT.donatedamount > 0)
-        for hit in hits:
-            print hit.workerid, hit.timeonserver, hit.donatedamount
+        assigns = session.query(Assignment)
+        assigns = assigns.filter(Assignment.donatedamount > 0)
+        for assign in assigns:
+            print assign.workerid, assign.timeonserver, assign.donatedamount
 
 class setup(Command):
     def setup(self):
@@ -487,8 +490,9 @@ class invalidate(Command):
         return parser
 
     def __call__(self, args):
-        query = session.query(HIT)
-        query = query.filter(HIT.useful == True)
+        query = session.query(Assignment)
+        query = query.join(HIT)
+        query = query.filter(Assingment.useful == True)
         if args.hit:
             query = query.filter(HIT.hitid == args.id)
         else:
@@ -501,12 +505,12 @@ class invalidate(Command):
                 print "Blocked worker \"{0}\"".format(args.id)
                 session.add(worker)
 
-            query = query.filter(HIT.workerid == args.id)
+            query = query.filter(Assignment.workerid == args.id)
 
-        for hit in query:
-            replacement = hit.invalidate()
-            session.add(hit)
-            print "Invalidated {0}".format(hit.hitid)
+        for assign in query:
+            replacement = assign.invalidate()
+            session.add(assign)
+            print "Invalidated {0}".format(assign.assignmentid)
 
             if replacement:
                 session.add(replacement)
@@ -514,7 +518,7 @@ class invalidate(Command):
                     session.commit()
                     replacement.publish()
                     session.add(replacement)
-                    print "Respawned with {0}".format(replacement.hitid)
+                    print "Respawned with {0}".format(replacement.assignmentid)
         session.commit()
 
 class workers(Command):
