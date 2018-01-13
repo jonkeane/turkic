@@ -125,6 +125,24 @@ class Server(object):
         r.validate("DisableHITResult/Request/IsValid",
                    "DisableHITResult/Request/Errors/Error/Message")
         return r
+        
+    def dispose(self, hitid):
+        """
+        Disposes the HIT from the MTurk service.
+        """
+        r = self.request("DisposeHIT", {"HITId": hitid})
+        r.validate("DisposeHITResult/Request/IsValid",
+                   "DisposeHITResult/Request/Errors/Error/Message")
+        return r
+        
+    def expire(self, hitid):
+        """
+        Expires the HIT on the MTurk service.
+        """
+        r = self.request("ForceExpireHIT", {"HITId": hitid})
+        r.validate("ForceExpireHITResult/Request/IsValid",
+                   "ForceExpireHITResult/Request/Errors/Error/Message")
+        return r
 
     def purge(self):
         """
@@ -142,7 +160,7 @@ class Server(object):
             for hit in r.tree.findall("SearchHITsResult/HIT"):
                 hitid = hit.find("HITId").text.strip()
                 try:
-                    self.disable(hitid)
+                    self.dispose(hitid)
                 except CommunicationError:
                     pass
             print "Next page"
