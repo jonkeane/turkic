@@ -91,6 +91,7 @@ class HIT(database.Base):
     group         = relationship(HITGroup, backref = "hits")
     ready         = Column(Boolean, default = True, index = True)
     published     = Column(Boolean, default = False, index = True)
+    purged        = Column(Boolean, default = False, index = True)
 
     discriminator = Column("type", String(250))
     __mapper_args__ = {"polymorphic_on": discriminator,
