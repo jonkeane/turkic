@@ -86,7 +86,7 @@ def application(environ, start_response):
         start_response("200 OK", [("Content-Type", type)])
         if jsonify:
             logger.debug("Response to " + str("/".join(path)) + ": " +
-                str(response))
+                str(response)[0:100])
             return [json.dumps(response)]
         else:
             return response
@@ -123,7 +123,7 @@ def getjobstats(hitid, workerid):
     Returns the worker status as a dictionary for the server.
     """
     status = {}
-    
+
     hit = get_open_assignments(hitid)
     status["reward"] = hit.group.cost
     status["donationcode"] = hit.group.donation
