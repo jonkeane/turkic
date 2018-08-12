@@ -409,7 +409,8 @@ class compensate(Command):
                             print "Rejected Assignment: {0}".format(assignment.assignmentid)
                         session.add(assignment)
                 except CommunicationError as e:
-                    assignment.compensated = True
+                    # if this is uncommented, it will always mark as compensated, which prevents further re-tries.
+                    # assignment.compensated = True
                     session.add(assignment)
                     print "Error with Assignment: {0}: {1}".format(assignment.assignmentid, e)
         finally:
