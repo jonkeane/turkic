@@ -190,10 +190,12 @@ def markcomplete(hitid, assignmentid, workerid):
     MTurk form is submitted.
     """
     print("Marking complete: hitid {0}; assignmentid {1}; workerid {2}".format(hitid, assignmentid, workerid))
-    assignment = get_open_assignments(hitid)
+    assignment = get_open_assignments(hitid, assignmentid)
     assignment.markcompleted(workerid, assignmentid)
     session.add(assignment)
     session.commit()
+    print("Finished marking complete: assignmentid {0}; workerid {2}".format(assignmentid, workerid))
+
 
 def saveeventlog(hitid, events):
     """
