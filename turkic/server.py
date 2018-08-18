@@ -167,7 +167,7 @@ def savejobstats(hitid, assignmentid, timeaccepted, timecompleted, environ):
 
     assignment.ipaddress = environ.get("HTTP_X_FORWARDED_FOR", None)
     assignment.ipaddress = environ.get("REMOTE_ADDR", assignment.ipaddress)
-    
+
     print("Saving job stats: ip {0}; assignmentid {1}; hitid {2}".format(assignment.ipaddress, assignmentid, hitid))
 
     session.add(assignment)
@@ -190,11 +190,11 @@ def markcomplete(hitid, assignmentid, workerid):
     MTurk form is submitted.
     """
     print("Marking complete: hitid {0}; assignmentid {1}; workerid {2}".format(hitid, assignmentid, workerid))
-    assignment = get_open_assignments(hitid, assignmentid)
+    assignment = get_open_assignments(hitid)
     assignment.markcompleted(workerid, assignmentid)
     session.add(assignment)
     session.commit()
-    print("Finished marking complete: assignmentid {0}; workerid {2}".format(assignmentid, workerid))
+    print("Finished marking complete: assignmentid {0}; workerid {1}".format(assignmentid, workerid))
 
 
 def saveeventlog(hitid, events):
